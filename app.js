@@ -222,7 +222,9 @@
           favicon = getDefaultIconUrl();
         }
         if (favicon) img.src = favicon;
-        img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+        img.style.visibility = 'hidden';
+        img.addEventListener('load', () => { img.style.visibility = 'visible'; });
+        // img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
 
         // title and url with highlight
         const titleSpan = document.createElement('span');
