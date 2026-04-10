@@ -8,7 +8,10 @@
 </head>
 <body>
   <div class="fsl-page" role="application" aria-label="FuzzyTabs">
-    <input id="fuzzy-tabs-input" type="text" autocomplete="off" placeholder="Start typing something..."/>
+    <div class="fsl-input-container">
+      <input id="fuzzy-tabs-input" type="text" autocomplete="off" placeholder="Start typing something..."/>
+      <div id="fsl-mode-icon" class="fsl-mode-icon"></div>
+    </div>
     <ul class="fsl-results" aria-label="Open tabs"></ul>
   </div>
   <script src="microfuzz.bundle.js"></script>

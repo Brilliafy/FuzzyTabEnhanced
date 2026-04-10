@@ -9,21 +9,28 @@
   function getUIElements() {
     const input = document.getElementById("fuzzy-tabs-input");
     const ul = document.querySelector('.fsl-results');
-    return { input, ul };
+    const modeIcon = document.getElementById("fsl-mode-icon");
+    return { input, ul, modeIcon };
+  }
+
+  const ICON_TAB = `<svg viewBox="0 0 16 16" width="16" height="16"><path d="M1 3.5A1.5 1.5 0 012.5 2h11A1.5 1.5 0 0115 3.5v9a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5v-9zM2.5 3a.5.5 0 00-.5.5V11h12V3.5a.5.5 0 00-.5-.5h-11z"/></svg>`;
+  const ICON_STAR = `<svg viewBox="0 0 16 16" width="16" height="16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg>`;
+
+  function updateModeUI() {
+    const { input, modeIcon } = getUIElements();
+    if (input) {
+      input.placeholder = STATE.mode === 'tabs' ? 'Search tabs...' : 'Search bookmarks...';
+      setTimeout(() => input.focus(), 50);
+    }
+    if (modeIcon) {
+      modeIcon.innerHTML = STATE.mode === 'tabs' ? ICON_TAB : ICON_STAR;
+      modeIcon.title = STATE.mode === 'tabs' ? 'Tab mode' : 'Bookmark mode';
+    }
   }
 
   function toggleMode() {
     STATE.mode = STATE.mode === 'tabs' ? 'bookmarks' : 'tabs';
-    try {
-      const api = (typeof browser !== 'undefined') ? browser : chrome;
-      api.storage.local.set({ mode: STATE.mode });
-    } catch (_) {}
-    const { input } = getUIElements();
-    if (input) {
-      input.value = '';
-      input.placeholder = STATE.mode === 'tabs' ? 'Search tabs...' : 'Search bookmarks...';
-    }
-    STATE.query = '';
+    updateModeUI();
     if (STATE.mode === 'tabs') {
       fetchAllTabsAndRender();
     } else {
@@ -224,7 +231,6 @@
         if (favicon) img.src = favicon;
         img.style.visibility = 'hidden';
         img.addEventListener('load', () => { img.style.visibility = 'visible'; });
-        // img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
 
         // title and url with highlight
         const titleSpan = document.createElement('span');
@@ -367,6 +373,11 @@
       input.addEventListener('input', () => computeResultsAndRender());
     }
 
+    const { modeIcon } = getUIElements();
+    if (modeIcon) {
+      modeIcon.addEventListener('click', () => toggleMode());
+    }
+
     // Enable mouse-driven focusing after actual mouse movement
     document.addEventListener('mousemove', () => {
       STATE.allowMouseFocus = true;
@@ -415,7 +426,7 @@
         }
         return;
       }
-      if (e.altKey && (e.key === 'b' || e.key === 'B')) {
+      if (e.key === 'Tab') {
         e.preventDefault();
         toggleMode();
         return;
@@ -472,13 +483,11 @@
           STATE.mode = 'tabs';
           fetchAllTabsAndRender();
         }
-        const { input } = getUIElements();
-        if (input) {
-          input.placeholder = STATE.mode === 'tabs' ? 'Search tabs...' : 'Search bookmarks...';
-        }
+        updateModeUI();
         api.storage.local.remove('mode');
       });
     } catch (_) {
+      updateModeUI();
       fetchAllTabsAndRender();
     }
   }
