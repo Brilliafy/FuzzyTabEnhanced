@@ -4,12 +4,54 @@
   log('content script loaded', { url: location.href });
 
   // State for results navigation
-  const STATE = { allTabs: [], tabs: [], focusedIndex: -1, query: '', allowMouseFocus: false };
+  const STATE = { allTabs: [], allBookmarks: [], mode: 'tabs', tabs: [], focusedIndex: -1, query: '', allowMouseFocus: false };
 
   function getUIElements() {
     const input = document.getElementById("fuzzy-tabs-input");
     const ul = document.querySelector('.fsl-results');
     return { input, ul };
+  }
+
+  function toggleMode() {
+    STATE.mode = STATE.mode === 'tabs' ? 'bookmarks' : 'tabs';
+    try {
+      const api = (typeof browser !== 'undefined') ? browser : chrome;
+      api.storage.local.set({ mode: STATE.mode });
+    } catch (_) {}
+    const { input } = getUIElements();
+    if (input) {
+      input.value = '';
+      input.placeholder = STATE.mode === 'tabs' ? 'Search tabs...' : 'Search bookmarks...';
+    }
+    STATE.query = '';
+    if (STATE.mode === 'tabs') {
+      fetchAllTabsAndRender();
+    } else {
+      fetchAllBookmarksAndRender();
+    }
+  }
+
+  function fetchAllBookmarksAndRender() {
+    try {
+      const api = (typeof browser !== 'undefined') ? browser : chrome;
+      api.runtime.sendMessage({ type: 'get-all-bookmarks' }, (resp) => {
+        try {
+          if (resp && resp.ok && Array.isArray(resp.bookmarks)) {
+            log('received bookmarks list', { count: resp.bookmarks.length });
+            STATE.allBookmarks = resp.bookmarks.slice();
+            computeResultsAndRender();
+          } else {
+            log('unexpected response for get-all-bookmarks', resp);
+            STATE.allBookmarks = [];
+            computeResultsAndRender();
+          }
+        } catch (e) {
+          log('error handling bookmarks response', e);
+        }
+      });
+    } catch (e) {
+      log('failed to request get-all-bookmarks', e);
+    }
   }
 
   function setFocusedIndex(newIndex) {
@@ -51,6 +93,17 @@
     } catch (_) {}
   }
 
+  function openBookmark(url) {
+    try {
+      const api = (typeof browser !== 'undefined') ? browser : chrome;
+      api.runtime.sendMessage({ type: 'open-bookmark', url }, (resp) => {
+        if (resp && resp.ok) {
+          closeExtensionWindow();
+        }
+      });
+    } catch (_) {}
+  }
+
   function buildHighlightedSpan(text, ranges) {
     const span = document.createElement('span');
     let pos = 0;
@@ -71,24 +124,32 @@
     if (!ul) return;
     const q = (input && input.value || '').trim();
     STATE.query = q;
+
+    const sourceData = STATE.mode === 'tabs' ? STATE.allTabs : STATE.allBookmarks;
+
     if (!q) {
-        // No query: show all tabs sorted by most recent first
-        const sortedTabs = STATE.allTabs
-            .slice()
-            .sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))
-            .map(t => ({item: t}));
-        renderTabsList(sortedTabs);
+        // No query: show all items
+        let sortedItems;
+        if (STATE.mode === 'tabs') {
+            sortedItems = sourceData
+                .slice()
+                .sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))
+                .map(t => ({item: t}));
+        } else {
+            sortedItems = sourceData.map(b => ({item: b}));
+        }
+        renderItems(sortedItems);
         return;
     }
 
-    const fuzzySearch = window.Microfuzz.createFuzzySearch(STATE.allTabs, {
+    const fuzzySearch = window.Microfuzz.createFuzzySearch(sourceData, {
         getText: (item) => [item.title, item.url]
     })
     const fuzzySearchResults = fuzzySearch(q)
-    renderTabsList(fuzzySearchResults);
+    renderItems(fuzzySearchResults);
   }
 
-  function renderTabsList(items) {
+  function renderItems(items) {
     try {
       const { ul } = getUIElements();
       if (!ul) return;
@@ -99,7 +160,7 @@
 
       if (!items.length) {
         const li = document.createElement('li');
-        li.textContent = STATE.query ? 'No results' : 'No tabs available';
+        li.textContent = STATE.query ? 'No results' : (STATE.mode === 'tabs' ? 'No tabs available' : 'No bookmarks available');
         li.style.color = 'rgba(255,255,255,0.6)';
         ul.appendChild(li);
         return;
@@ -108,7 +169,11 @@
       for (let i = 0; i < items.length; i++) {
         const { item: t, matches } = items[i];
         const li = document.createElement('li');
-        li.setAttribute('data-tab-id', String(t.id));
+        if (STATE.mode === 'tabs') {
+          li.setAttribute('data-tab-id', String(t.id));
+        } else {
+          li.setAttribute('data-url', t.url);
+        }
         li.setAttribute('role', 'option');
         li.setAttribute('aria-selected', 'false');
 
@@ -185,46 +250,48 @@
         li.appendChild(titleSpan);
         li.appendChild(urlSpan);
 
-        // close (cross) button on the right
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'fsl-close';
-        closeBtn.type = 'button';
-        // SVG cross icon
-        // Ensure the cross is visible by explicitly disabling fill and using rounded joins
-        closeBtn.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M3 3 L9 9 M9 3 L3 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
-        // Tooltip with platform-specific hotkey
-        const isMac = navigator.platform && /Mac/i.test(navigator.platform);
-        closeBtn.title = isMac ? 'Ctrl+W' : 'Alt+W';
-        // Prevent list item activation and focus changes on clicking cross
-        const handleClose = (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          const tabId = t.id;
-          if (typeof tabId !== 'number') return;
-          try {
-            const api = (typeof browser !== 'undefined') ? browser : chrome;
-            api.runtime.sendMessage({ type: 'close-tab', tabId }, () => {
-              try {
-                // Remove li and update state similarly to keyboard path
-                const currentUl = ul;
-                li.remove();
-                const remaining = Array.from(currentUl.querySelectorAll('li'));
-                STATE.tabs = STATE.tabs.filter(tt => tt.id !== tabId);
-                STATE.allTabs = STATE.allTabs.filter(tt => tt.id !== tabId);
-                if (remaining.length > 0) {
-                  const idx = Math.min(STATE.focusedIndex, remaining.length - 1);
-                  STATE.focusedIndex = -1;
-                  setFocusedIndex(idx);
-                } else {
-                  computeResultsAndRender();
-                }
-              } catch (_) {}
-            });
-          } catch (_) {}
-        };
-        closeBtn.addEventListener('click', handleClose);
+        if (STATE.mode === 'tabs') {
+          // close (cross) button on the right
+          const closeBtn = document.createElement('button');
+          closeBtn.className = 'fsl-close';
+          closeBtn.type = 'button';
+          // SVG cross icon
+          // Ensure the cross is visible by explicitly disabling fill and using rounded joins
+          closeBtn.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M3 3 L9 9 M9 3 L3 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+          // Tooltip with platform-specific hotkey
+          const isMac = navigator.platform && /Mac/i.test(navigator.platform);
+          closeBtn.title = isMac ? 'Ctrl+W' : 'Alt+W';
+          // Prevent list item activation and focus changes on clicking cross
+          const handleClose = (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            const tabId = t.id;
+            if (typeof tabId !== 'number') return;
+            try {
+              const api = (typeof browser !== 'undefined') ? browser : chrome;
+              api.runtime.sendMessage({ type: 'close-tab', tabId }, () => {
+                try {
+                  // Remove li and update state similarly to keyboard path
+                  const currentUl = ul;
+                  li.remove();
+                  const remaining = Array.from(currentUl.querySelectorAll('li'));
+                  STATE.tabs = STATE.tabs.filter(tt => tt.id !== tabId);
+                  STATE.allTabs = STATE.allTabs.filter(tt => tt.id !== tabId);
+                  if (remaining.length > 0) {
+                    const idx = Math.min(STATE.focusedIndex, remaining.length - 1);
+                    STATE.focusedIndex = -1;
+                    setFocusedIndex(idx);
+                  } else {
+                    computeResultsAndRender();
+                  }
+                } catch (_) {}
+              });
+            } catch (_) {}
+          };
+          closeBtn.addEventListener('click', handleClose);
 
-        li.appendChild(closeBtn);
+          li.appendChild(closeBtn);
+        }
 
         // interactions: hover moves focus (only when mouse focus is enabled); click/mousedown activates
         li.addEventListener('mouseenter', () => {
@@ -232,26 +299,26 @@
           const idx = Array.prototype.indexOf.call(ul.children, li);
           setFocusedIndex(idx);
         });
-        // Activate early on mousedown to avoid input blur closing the overlay before click fires
-        li.addEventListener('mousedown', (ev) => {
+
+        const handleActivate = (ev) => {
           try {
             // Only react to primary button and ignore clicks on the close button
             if (ev.button !== 0) return;
             if (ev.target && ev.target.closest && ev.target.closest('.fsl-close')) return;
             ev.preventDefault();
-            const tabId = t.id;
-            if (tabId != null) activateTabById(tabId);
+            if (STATE.mode === 'tabs') {
+              const tabId = t.id;
+              if (tabId != null) activateTabById(tabId);
+            } else {
+              const url = t.url;
+              if (url != null) openBookmark(url);
+            }
           } catch (_) {}
-        });
+        };
+        // Activate early on mousedown to avoid input blur closing the overlay before click fires
+        li.addEventListener('mousedown', handleActivate);
         // Fallback activation on click (in case mousedown was prevented by the page)
-        li.addEventListener('click', (ev) => {
-          try {
-            if (ev.target && ev.target.closest && ev.target.closest('.fsl-close')) return;
-            ev.preventDefault();
-            const tabId = t.id;
-            if (tabId != null) activateTabById(tabId);
-          } catch (_) {}
-        });
+        li.addEventListener('click', handleActivate);
 
         ul.appendChild(li);
       }
@@ -293,6 +360,7 @@
     if (input) {
       log('focusing input');
       input.value = '';
+      input.placeholder = STATE.mode === 'tabs' ? 'Search tabs...' : 'Search bookmarks...';
       setTimeout(() => input.focus(), 50);
       input.addEventListener('input', () => computeResultsAndRender());
     }
@@ -323,23 +391,37 @@
         return;
       }
       if (e.key === 'Enter') {
-        // Activate the focused tab
+        // Activate the focused item
         const { ul } = getUIElements();
         if (!ul) return;
         const items = Array.from(ul.querySelectorAll('li'));
         if (STATE.focusedIndex >= 0 && items[STATE.focusedIndex]) {
           const li = items[STATE.focusedIndex];
-          const tabId = li && li.getAttribute('data-tab-id');
-          if (tabId) {
-            e.preventDefault();
-            activateTabById(parseInt(tabId, 10));
+          if (STATE.mode === 'tabs') {
+            const tabId = li && li.getAttribute('data-tab-id');
+            if (tabId) {
+              e.preventDefault();
+              activateTabById(parseInt(tabId, 10));
+            }
+          } else {
+            const url = li && li.getAttribute('data-url');
+            if (url) {
+              e.preventDefault();
+              openBookmark(url);
+            }
           }
         }
+        return;
+      }
+      if (e.altKey && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        toggleMode();
         return;
       }
       // Ctrl/Cmd+W closes the focused tab from the list (not the browser tab)
       const isMac = navigator.platform && /Mac/i.test(navigator.platform);
       if ((e.key === 'w' || e.key === 'W') && (e.ctrlKey && isMac || e.altKey && !isMac)) {
+        if (STATE.mode !== 'tabs') return;
         const { ul } = getUIElements();
         if (!ul) return;
         const items = Array.from(ul.querySelectorAll('li'));
@@ -377,8 +459,26 @@
       }
     }, true);
 
-    // Load tabs list under the input
-    fetchAllTabsAndRender();
+    // Load mode and items
+    try {
+      const api = (typeof browser !== 'undefined') ? browser : chrome;
+      api.storage.local.get('mode', (res) => {
+        if (res && res.mode === 'bookmarks') {
+          STATE.mode = 'bookmarks';
+          fetchAllBookmarksAndRender();
+        } else {
+          STATE.mode = 'tabs';
+          fetchAllTabsAndRender();
+        }
+        const { input } = getUIElements();
+        if (input) {
+          input.placeholder = STATE.mode === 'tabs' ? 'Search tabs...' : 'Search bookmarks...';
+        }
+        api.storage.local.remove('mode');
+      });
+    } catch (_) {
+      fetchAllTabsAndRender();
+    }
   }
 
   // Close the extension window

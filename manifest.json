@@ -12,7 +12,9 @@
     "default_popup": "app.html"
   },
   "permissions": [
-    "tabs"
+    "tabs",
+    "bookmarks",
+    "storage"
   ],
   "background": {
     "scripts": ["background.js"],
@@ -24,6 +26,12 @@
         "default": "Ctrl+Shift+Space"
       },
       "description": "Open FuzzyTabs"
+    },
+    "open-bookmarks": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+B"
+      },
+      "description": "Open FuzzyTabs in bookmarks mode"
     }
   }
 }

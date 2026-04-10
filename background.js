@@ -59,6 +59,30 @@
             }
           });
           return true; // keep the message channel open for async sendResponse
+        } else if (msg.type === 'get-all-bookmarks') {
+          log('get-all-bookmarks request');
+          try {
+            api.bookmarks.getTree((tree) => {
+              try {
+                const items = [];
+                const flatten = (nodes) => {
+                  for (const n of nodes) {
+                    if (n.url) items.push({ id: n.id, title: n.title, url: n.url });
+                    if (n.children) flatten(n.children);
+                  }
+                };
+                flatten(tree || []);
+                sendResponse({ ok: true, bookmarks: items });
+              } catch (e) {
+                log('error flattening bookmarks', e);
+                sendResponse({ ok: false, error: String(e) });
+              }
+            });
+            return true;
+          } catch (e) {
+            log('bookmarks.getTree threw', e);
+            sendResponse({ ok: false, error: String(e) });
+          }
         } else if (msg.type === 'activate-tab') {
           const tabId = msg && msg.tabId;
           if (typeof tabId === 'number') {
@@ -83,6 +107,28 @@
             }
           } else {
             sendResponse({ ok: false, error: 'Invalid tabId' });
+          }
+        } else if (msg.type === 'open-bookmark') {
+          const url = msg && msg.url;
+          if (typeof url === 'string') {
+            log('open-bookmark request', { url });
+            try {
+              api.tabs.create({ url }, (tab) => {
+                const err = api.runtime && api.runtime.lastError;
+                if (err) {
+                  log('tabs.create error', err);
+                  sendResponse({ ok: false, error: String(err && err.message || err) });
+                } else {
+                  sendResponse({ ok: true });
+                }
+              });
+              return true; // async
+            } catch (e) {
+              log('tabs.create threw', e);
+              sendResponse({ ok: false, error: String(e) });
+            }
+          } else {
+            sendResponse({ ok: false, error: 'Invalid url' });
           }
         } else if (msg.type === 'close-tab') {
           const tabId = msg && msg.tabId;
@@ -109,6 +155,20 @@
         }
       } catch (e) {
         log('onMessage handler error', e);
+      }
+    });
+  }
+
+  if (api && api.commands && api.commands.onCommand) {
+    api.commands.onCommand.addListener((command) => {
+      if (command === 'open-bookmarks') {
+        try {
+          api.storage.local.set({ mode: 'bookmarks' }, () => {
+            if (api.browserAction && api.browserAction.openPopup) {
+              api.browserAction.openPopup();
+            }
+          });
+        } catch (_) {}
       }
     });
   }
