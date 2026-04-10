@@ -1,10 +1,15 @@
 html, body { margin: 0; padding: 0; width: 800px; height: 560px; background: transparent; }
 
-:host { position: fixed; inset: 0; z-index: 2147483647; display: none; }
-:host(.open) { display: block; }
+/* .fsl-overlay is used when injected into pages; :host is for shadow DOM support */
+.fsl-overlay { position: fixed; inset: 0; z-index: 2147483647; display: none; }
+.fsl-overlay.open { display: block; }
 *, *::before, *::after { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
 .fsl-page { position: absolute; inset: 0; display: flex; flex-direction: column; background: #222224; color: #fff; padding: 14px 18px; }
-.fsl-page input { width: 100%; background: transparent; border: none; outline: none; font-size: 20px; color: #fff; caret-color: #66d9ef; }
+.fsl-input-container { position: relative; width: 100%; min-height: 28px; display: flex; align-items: center; justify-content: space-between; }
+.fsl-page input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; font-size: 20px; color: #fff; caret-color: #66d9ef; line-height: 1.4; padding: 0; margin: 0; }
+.fsl-mode-icon { width: 18px; height: 18px; color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; overflow: hidden; margin-left: 12px; flex: 0 0 18px; cursor: pointer; transition: color 120ms ease; }
+.fsl-mode-icon:hover { color: rgba(255,255,255,0.8); }
+.fsl-mode-icon svg { width: 100%; height: 100%; display: block; fill: currentColor; }
 .fsl-page input::placeholder { color: rgba(255,255,255,0.55); }
 .fsl-results { margin: 8px 0 0; padding: 4px 0 0; list-style: none; flex: 1 1 auto; overflow-y: auto; border-top: 1px solid rgba(255,255,255,0.08); }
 .fsl-results li { display: flex; align-items: center; gap: 8px; padding: 8px 6px; font-size: 14px; line-height: 1.35; color: rgba(255,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }

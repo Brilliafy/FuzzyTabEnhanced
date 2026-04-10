@@ -2,7 +2,7 @@
   <img src="icons/ic_search.svg" alt="FuzzyTabs icon" width="96" height="96">
 </p>
 <h1 align="center">FuzzyTabs</h1>
-<p align="center">Lightning-fast, lightweight, open‑source fuzzy search across your browser tabs.</p>
+<p align="center">Lightning-fast, lightweight, open‑source fuzzy search across your browser tabs and bookmarks.</p>
 
 ---
 
@@ -11,7 +11,7 @@
   <img src="media/app-screen-2.png" width="600">
 </p>
 
-FuzzyTabs is a minimal browser extension that lets you quickly find and switch between your open tabs using fuzzy
+FuzzyTabs is a minimal browser extension that lets you quickly find and switch between your open tabs or bookmarks using fuzzy
 search.
 It runs instantly, stays out of your way, and keeps resource usage low.
 
@@ -31,18 +31,20 @@ Firefox has a built-in search for tabs, but it's not as fast and convenient as F
 
 ## Features
 
-- Fuzzy search: Type a few characters and jump to the right tab with smart, forgiving matching.
-- Fast: Snappy overlay with near-instant filtering across all your open tabs.
+- Fuzzy search: Type a few characters and jump to the right tab or bookmark with smart, forgiving matching.
+- Fast: Snappy overlay with near-instant filtering across all your open tabs and bookmarks.
 - Lightweight: Small footprint, no tracking, minimal permissions.
 - Open source: Built in the open — contributions and ideas are welcome.
 
 ## Usage
 
-- Open: Click the FuzzyTabs toolbar button or `Ctrl+Shift+Space`
+- Open tabs: Click the FuzzyTabs toolbar button or `Ctrl+Shift+Space`
+- Open bookmarks: `Ctrl+Shift+B`
+- Switch mode (Tabs/Bookmarks): `Tab`
 - Navigate: Arrow Up/Down or `Ctrl+N` / `Ctrl+P`
-- Activate the selected tab: Enter
+- Activate the selected item: Enter
 - Close the selected tab: `Ctrl+W` (macOS) / `Alt+W` (Linux/Windows)
-  Note that it's not possible to override the default close tab shortcut, so we use non-standard shortcuts.
+  Note that it's not possible to override the default close tab shortcut, so we use non-standard shortcuts. Close is only available for tabs.
 
 ## Settings
 
