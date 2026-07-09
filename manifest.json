@@ -1,13 +1,13 @@
 {
   "manifest_version": 2,
-  "name": "FuzzyTabs",
+  "name": "FuzzyTabEnhanced",
   "version": "1.3.0",
   "description": "Fuzzy-search through opened tabs or bookmarks",
   "icons": {
     "48": "icons/ic_search.svg"
   },
   "browser_action": {
-    "default_title": "FuzzyTabs",
+    "default_title": "FuzzyTabEnhanced",
     "default_icon": "icons/ic_search.svg",
     "default_popup": "app.html"
   },

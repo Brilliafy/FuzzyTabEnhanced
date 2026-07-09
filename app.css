@@ -1,33 +1,275 @@
-html, body { margin: 0; padding: 0; width: 800px; height: 560px; background: transparent; }
+/* General resets */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 800px;
+  height: 560px;
+  background: transparent;
+  overflow: hidden;
+}
 
-/* .fsl-overlay is used when injected into pages; :host is for shadow DOM support */
-.fsl-overlay { position: fixed; inset: 0; z-index: 2147483647; display: none; }
-.fsl-overlay.open { display: block; }
-*, *::before, *::after { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-.fsl-page { position: absolute; inset: 0; display: flex; flex-direction: column; background: #222224; color: #fff; padding: 14px 18px; }
-.fsl-input-container { position: relative; width: 100%; min-height: 28px; display: flex; align-items: center; justify-content: space-between; }
-.fsl-page input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; font-size: 20px; color: #fff; caret-color: #66d9ef; line-height: 1.4; padding: 0; margin: 0; }
-.fsl-mode-icon { width: 18px; height: 18px; color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; overflow: hidden; margin-left: 12px; flex: 0 0 18px; cursor: pointer; transition: color 120ms ease; }
-.fsl-mode-icon:hover { color: rgba(255,255,255,0.8); }
-.fsl-mode-icon svg { width: 100%; height: 100%; display: block; fill: currentColor; }
-.fsl-page input::placeholder { color: rgba(255,255,255,0.55); }
-.fsl-results { margin: 8px 0 0; padding: 4px 0 0; list-style: none; flex: 1 1 auto; overflow-y: auto; border-top: 1px solid rgba(255,255,255,0.08); }
-.fsl-results li { display: flex; align-items: center; gap: 8px; padding: 8px 6px; font-size: 14px; line-height: 1.35; color: rgba(255,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
-.fsl-results li:nth-child(odd) { background: rgba(255,255,255,0.03); }
-.fsl-fav { width: 16px; height: 16px; flex: 0 0 16px; border-radius: 2px; background: rgba(255,255,255,0.1); }
-.fsl-title { font-weight: 500; margin-right: 6px; overflow: hidden; text-overflow: ellipsis; }
-.fsl-url { color: rgba(255,255,255,0.65); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
-.fsl-results li .fsl-arrow { width: 10px; flex: 0 0 10px; color: #fff; opacity: 0; }
-.fsl-results li.focused .fsl-arrow { opacity: 1; }
-.fsl-results li.focused { background: rgba(255,255,255,0.08); }
-.fsl-hl { color: #ffe08a; font-weight: 700; }
-.fsl-results li .fsl-close { margin-left: auto; flex: 0 0 auto; width: 16px; height: 16px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.65); opacity: 0; cursor: pointer; user-select: none; background: transparent; border: 1px solid rgba(255,255,255,0.06); transition: opacity 120ms ease, background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease; }
-.fsl-results li.focused .fsl-close { opacity: 1; }
-.fsl-results li .fsl-close:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10); }
-.fsl-results li .fsl-close:active { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.14); }
-.fsl-results li .fsl-close:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,0.12); }
-.fsl-results li .fsl-close svg { width: 10px; height: 10px; display: block; }
-.fsl-results { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.35) transparent; }
-.fsl-results::-webkit-scrollbar { width: 8px; height: 8px; }
-.fsl-results::-webkit-scrollbar-thumb { background-color: rgba(255,255,255,0.35); border-radius: 6px; }
-.fsl-results::-webkit-scrollbar-track { background: transparent; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Page wrapper with dark glassmorphism */
+.fsl-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(18, 18, 22, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: #f3f4f6;
+  padding: 16px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Input container */
+.fsl-input-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.fsl-input-container:focus-within {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Prompt symbol like fzf */
+.fsl-prompt {
+  color: #6366f1;
+  font-weight: 700;
+  font-size: 18px;
+  margin-right: 10px;
+  user-select: none;
+  display: flex;
+  align-items: center;
+}
+
+/* Input field */
+.fsl-page input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  font-weight: 400;
+  color: #ffffff;
+  caret-color: #6366f1;
+  line-height: 1.4;
+  padding: 0;
+  margin: 0;
+}
+
+.fsl-page input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* Counter display */
+.fsl-counter {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  margin-left: 12px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* Mode toggler icon */
+.fsl-mode-icon {
+  width: 20px;
+  height: 20px;
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 12px;
+  flex: 0 0 20px;
+  cursor: pointer;
+  transition: color 150ms ease, transform 150ms ease;
+}
+
+.fsl-mode-icon:hover {
+  color: rgba(255, 255, 255, 0.8);
+  transform: scale(1.05);
+}
+
+.fsl-mode-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: currentColor;
+}
+
+/* Results list */
+.fsl-results {
+  margin: 0;
+  padding: 4px 0 0 0;
+  list-style: none;
+  flex: 1;
+  overflow-y: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.fsl-results::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.fsl-results::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.fsl-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* List item */
+.fsl-results li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 6px;
+  margin-bottom: 2px;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 80ms ease, color 80ms ease;
+}
+
+.fsl-results li:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+/* Hover and focused states */
+.fsl-results li:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.fsl-results li.focused {
+  background: rgba(99, 102, 241, 0.14);
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.3);
+}
+
+/* Indicator arrow */
+.fsl-results li .fsl-arrow {
+  width: 10px;
+  flex: 0 0 10px;
+  color: #818cf8;
+  opacity: 0;
+  font-size: 12px;
+  transition: opacity 80ms ease;
+}
+
+.fsl-results li.focused .fsl-arrow {
+  opacity: 1;
+}
+
+/* Favicon */
+.fsl-fav {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Title text */
+.fsl-title {
+  font-weight: 500;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* URL text */
+.fsl-url {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Match highlight */
+.fsl-hl {
+  color: #fbbf24;
+  font-weight: 700;
+  background: rgba(251, 191, 36, 0.1);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Recency badge (clock) */
+.fsl-recent-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 8px;
+  flex-shrink: 0;
+  transition: color 150ms ease;
+}
+
+.fsl-results li.focused .fsl-recent-badge {
+  color: rgba(129, 140, 248, 0.8);
+}
+
+/* Close button for tabs */
+.fsl-results li .fsl-close {
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.4);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  opacity: 0;
+  cursor: pointer;
+  outline: none;
+  transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.fsl-results li.focused .fsl-close {
+  opacity: 1;
+}
+
+.fsl-results li .fsl-close:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.fsl-results li .fsl-close svg {
+  width: 8px;
+  height: 8px;
+  stroke: currentColor;
+}

@@ -47,36 +47,58 @@
         if (!msg || !msg.type) return; // not ours
         if (msg.type === 'get-all-tabs') {
           log('get-all-tabs request');
-          api.tabs.query({}, (tabs) => {
-            try {
-              const data = (tabs || []).map(
-                  t => ({ id: t.id, title: t.title, url: t.url, favIconUrl: t.favIconUrl, active: t.active, windowId: t.windowId, lastAccessed: t.lastAccessed })
-              );
-              sendResponse({ ok: true, tabs: data });
-            } catch (e) {
-              log('error mapping tabs', e);
-              sendResponse({ ok: false, error: String(e) });
-            }
+          api.storage.local.get(['tabAccessTimes'], (result) => {
+            const accessTimes = result.tabAccessTimes || {};
+            api.tabs.query({}, (tabs) => {
+              try {
+                const data = (tabs || []).map(t => {
+                  const lastAcc = accessTimes[t.id] || t.lastAccessed || 0;
+                  return {
+                    id: t.id,
+                    title: t.title,
+                    url: t.url,
+                    favIconUrl: t.favIconUrl,
+                    active: t.active,
+                    windowId: t.windowId,
+                    lastAccessed: lastAcc
+                  };
+                });
+                sendResponse({ ok: true, tabs: data });
+              } catch (e) {
+                log('error mapping tabs', e);
+                sendResponse({ ok: false, error: String(e) });
+              }
+            });
           });
           return true; // keep the message channel open for async sendResponse
         } else if (msg.type === 'get-all-bookmarks') {
           log('get-all-bookmarks request');
           try {
-            api.bookmarks.getTree((tree) => {
-              try {
-                const items = [];
-                const flatten = (nodes) => {
-                  for (const n of nodes) {
-                    if (n.url) items.push({ id: n.id, title: n.title, url: n.url });
-                    if (n.children) flatten(n.children);
-                  }
-                };
-                flatten(tree || []);
-                sendResponse({ ok: true, bookmarks: items });
-              } catch (e) {
-                log('error flattening bookmarks', e);
-                sendResponse({ ok: false, error: String(e) });
-              }
+            api.storage.local.get(['bookmarkAccessTimes'], (result) => {
+              const accessTimes = result.bookmarkAccessTimes || {};
+              api.bookmarks.getTree((tree) => {
+                try {
+                  const items = [];
+                  const flatten = (nodes) => {
+                    for (const n of nodes) {
+                      if (n.url) {
+                        items.push({
+                          id: n.id,
+                          title: n.title,
+                          url: n.url,
+                          lastAccessed: accessTimes[n.url] || 0
+                        });
+                      }
+                      if (n.children) flatten(n.children);
+                    }
+                  };
+                  flatten(tree || []);
+                  sendResponse({ ok: true, bookmarks: items });
+                } catch (e) {
+                  log('error flattening bookmarks', e);
+                  sendResponse({ ok: false, error: String(e) });
+                }
+              });
             });
             return true;
           } catch (e) {
@@ -88,17 +110,22 @@
           if (typeof tabId === 'number') {
             log('activate-tab request', { tabId });
             try {
-              api.tabs.get(tabId, (tabInfo) => {
-                const getErr = api.runtime && api.runtime.lastError;
-                if (getErr) {
-                  log('tabs.get error', getErr);
-                  // Fallback: try to activate anyway
-                  activateTabAndRespond(tabId, sendResponse);
-                  return;
-                }
-                const targetWindowId = tabInfo && tabInfo.windowId;
-                // First, focus the window (also unminimize if supported)
-                focusWindowThenActivate(targetWindowId, tabId, sendResponse);
+              const now = Date.now();
+              api.storage.local.get(['tabAccessTimes'], (result) => {
+                const accessTimes = result.tabAccessTimes || {};
+                accessTimes[tabId] = now;
+                api.storage.local.set({ tabAccessTimes: accessTimes }, () => {
+                  api.tabs.get(tabId, (tabInfo) => {
+                    const getErr = api.runtime && api.runtime.lastError;
+                    if (getErr) {
+                      log('tabs.get error', getErr);
+                      activateTabAndRespond(tabId, sendResponse);
+                      return;
+                    }
+                    const targetWindowId = tabInfo && tabInfo.windowId;
+                    focusWindowThenActivate(targetWindowId, tabId, sendResponse);
+                  });
+                });
               });
               return true; // async
             } catch (e) {
@@ -113,14 +140,21 @@
           if (typeof url === 'string') {
             log('open-bookmark request', { url });
             try {
-              api.tabs.create({ url }, (tab) => {
-                const err = api.runtime && api.runtime.lastError;
-                if (err) {
-                  log('tabs.create error', err);
-                  sendResponse({ ok: false, error: String(err && err.message || err) });
-                } else {
-                  sendResponse({ ok: true });
-                }
+              const now = Date.now();
+              api.storage.local.get(['bookmarkAccessTimes'], (result) => {
+                const accessTimes = result.bookmarkAccessTimes || {};
+                accessTimes[url] = now;
+                api.storage.local.set({ bookmarkAccessTimes: accessTimes }, () => {
+                  api.tabs.create({ url }, (tab) => {
+                    const err = api.runtime && api.runtime.lastError;
+                    if (err) {
+                      log('tabs.create error', err);
+                      sendResponse({ ok: false, error: String(err && err.message || err) });
+                    } else {
+                      sendResponse({ ok: true });
+                    }
+                  });
+                });
               });
               return true; // async
             } catch (e) {
@@ -171,5 +205,42 @@
         } catch (_) {}
       }
     });
+  }
+
+  // Active tab tracking listeners
+  if (api && api.tabs) {
+    if (api.tabs.onActivated) {
+      api.tabs.onActivated.addListener((activeInfo) => {
+        const tabId = activeInfo.tabId;
+        const now = Date.now();
+        api.storage.local.get(['tabAccessTimes'], (result) => {
+          const accessTimes = result.tabAccessTimes || {};
+          accessTimes[tabId] = now;
+          api.storage.local.set({ tabAccessTimes: accessTimes });
+        });
+      });
+    }
+    if (api.tabs.onRemoved) {
+      api.tabs.onRemoved.addListener((tabId) => {
+        api.storage.local.get(['tabAccessTimes'], (result) => {
+          const accessTimes = result.tabAccessTimes || {};
+          delete accessTimes[tabId];
+          api.storage.local.set({ tabAccessTimes: accessTimes });
+        });
+      });
+    }
+    // Initialize access time for currently active tab
+    try {
+      api.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs && tabs[0]) {
+          const tabId = tabs[0].id;
+          api.storage.local.get(['tabAccessTimes'], (result) => {
+            const accessTimes = result.tabAccessTimes || {};
+            accessTimes[tabId] = Date.now();
+            api.storage.local.set({ tabAccessTimes: accessTimes });
+          });
+        }
+      });
+    } catch (_) {}
   }
 })();
