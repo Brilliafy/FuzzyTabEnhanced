@@ -3,13 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FuzzyTabs</title>
+  <title>FuzzyTabEnhanced</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <div class="fsl-page" role="application" aria-label="FuzzyTabs">
+  <div class="fsl-page" role="application" aria-label="FuzzyTabEnhanced">
     <div class="fsl-input-container">
-      <input id="fuzzy-tabs-input" type="text" autocomplete="off" placeholder="Start typing something..."/>
+      <span class="fsl-prompt">&gt;</span>
+      <input id="fuzzy-tabs-input" type="text" autocomplete="off" placeholder="Start typing something..." autofocus/>
+      <div id="fsl-counter" class="fsl-counter">0/0</div>
       <div id="fsl-mode-icon" class="fsl-mode-icon"></div>
     </div>
     <ul class="fsl-results" aria-label="Open tabs"></ul>

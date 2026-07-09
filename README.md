@@ -1,67 +1,40 @@
 <p align="center">
-  <img src="icons/ic_search.svg" alt="FuzzyTabs icon" width="96" height="96">
+  <img src="icons/ic_search.svg" alt="FuzzyTabEnhanced icon" width="96" height="96">
 </p>
-<h1 align="center">FuzzyTabs</h1>
-<p align="center">Lightning-fast, lightweight, open‑source fuzzy search across your browser tabs and bookmarks.</p>
+<h1 align="center">FuzzyTabEnhanced</h1>
+<p align="center">An enhanced, modern, lightning-fast fzf-like fuzzy search across your browser tabs and bookmarks with a glassmorphism UI.</p>
 
 ---
 
-<p align="center">
-  <img src="media/app-screen-1.png" width="600">
-  <img src="media/app-screen-2.png" width="600">
-</p>
-
-FuzzyTabs is a minimal browser extension that lets you quickly find and switch between your open tabs or bookmarks using fuzzy
-search.
-It runs instantly, stays out of your way, and keeps resource usage low.
-
-https://addons.mozilla.org/en-US/firefox/addon/terrakok-fuzzytabs/
-
-## Motivation
-
-Firefox has a built-in search for tabs, but it's not as fast and convenient as FuzzyTabs:
-1) You have to open the search bar
-2) type the `%` + space
-3) then type a search query
-4) select the right tab
-
-👻 **and there is no Fuzzy Search!**
-
-🚀 FuzzyTabs lets you jump to the right tab much faster.
+FuzzyTabEnhanced is a modernized fork of the original FuzzyTabs browser extension. It introduces a powerful fzf-style search matching algorithm, prioritizes recent tabs with access-tracking, and updates the interface with smooth, premium glassmorphism styling and snappy animations.
 
 ## Features
 
-- Fuzzy search: Type a few characters and jump to the right tab or bookmark with smart, forgiving matching.
-- Fast: Snappy overlay with near-instant filtering across all your open tabs and bookmarks.
-- Lightweight: Small footprint, no tracking, minimal permissions.
-- Open source: Built in the open — contributions and ideas are welcome.
+- 🎯 **FZF-Style Matching**: Supports out-of-order multi-term queries (e.g., searching `goog doc` matches `Google Docs`). Exact substring matches are prioritized over scattered fuzzy sequences, and title matches are prioritized over URL matches.
+- ⚡ **Recency Prioritization**: Recent tabs and bookmarks are automatically prioritized. The most recently accessed items appear first when the search box is empty and receive a score boost when matching a query.
+- 🕒 **Recency Badges**: Features beautiful clock icons next to tabs or bookmarks accessed within the last 24 hours. Hovering over the badge shows a precise access time description (e.g. `Accessed 5m ago`).
+- 📊 **Match Counters**: Shows a live FZF-like `matchedCount/totalCount` display (e.g. `12/84`).
+- 🎨 **Glassmorphism UI**: Beautiful, modern dark UI featuring translucent backgrounds with a smooth Gaussian blur, premium fonts, clean spacing, and snappy hover/selection animations.
+- ⌨️ **Vim & FZF Navigation**: Standard Vim navigation hotkeys (`Ctrl+J` / `Ctrl+K`) and exit bindings (`Ctrl+C`) alongside default arrow keys and `Ctrl+N`/`Ctrl+P`.
 
 ## Usage
 
-- Open tabs: Click the FuzzyTabs toolbar button or `Ctrl+Shift+Space`
-- Open bookmarks: `Ctrl+Shift+B`
-- Switch mode (Tabs/Bookmarks): `Tab`
-- Navigate: Arrow Up/Down or `Ctrl+N` / `Ctrl+P`
-- Activate the selected item: Enter
-- Close the selected tab: `Ctrl+W` (macOS) / `Alt+W` (Linux/Windows)
-  Note that it's not possible to override the default close tab shortcut, so we use non-standard shortcuts. Close is only available for tabs.
-
-## Settings
-
-<p align="center">
-  <img src="media/settings-1.png" width="400">
-  <img src="media/settings-2.png" width="400">
-</p>
+- **Open tabs**: Click the FuzzyTabEnhanced toolbar button or press `Ctrl+Shift+Space`
+- **Open bookmarks**: Press `Ctrl+Shift+B`
+- **Switch mode (Tabs/Bookmarks)**: Press `Tab`
+- **Navigate**: Arrow Up/Down or `Ctrl+N`/`Ctrl+P` (or Vim-style `Ctrl+J`/`Ctrl+K`)
+- **Activate selected item**: Press `Enter` (or click / press mouse button)
+- **Close selected tab**: Press `Ctrl+W` (macOS) / `Alt+W` (Linux/Windows)
+- **Exit/Close searcher**: Press `Escape` or `Ctrl+C`
 
 ## Dev Installation
 
-- Download the latest release from [releases](https://github.com/terrakok/fuzzytabs/releases)
-- In Firefox: open `about:addons`
-- Click on the gear icon
-- Select `Debug add-ons`
-- Select `Load Temporary Add-on`
-- Open the downloaded `extension.zip`
-
-## Support
-
-<a href="https://www.buymeacoffee.com/terrakok" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-green.png" alt="Buy Me A Coffee" width="200"></a>
+1. Clone or download this repository.
+2. In Chrome:
+   - Go to `chrome://extensions/`
+   - Enable **Developer mode** (toggle in the top-right).
+   - Click **Load unpacked** and select the extension directory.
+3. In Firefox:
+   - Go to `about:debugging#/runtime/this-firefox`
+   - Click **Load Temporary Add-on...**
+   - Select `manifest.json` from the extension directory.

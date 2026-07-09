@@ -15,6 +15,180 @@
 
   const ICON_TAB = `<svg viewBox="0 0 16 16" width="16" height="16"><path d="M1 3.5A1.5 1.5 0 012.5 2h11A1.5 1.5 0 0115 3.5v9a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5v-9zM2.5 3a.5.5 0 00-.5.5V11h12V3.5a.5.5 0 00-.5-.5h-11z"/></svg>`;
   const ICON_STAR = `<svg viewBox="0 0 16 16" width="16" height="16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg>`;
+  const ICON_CLOCK = `<svg viewBox="0 0 16 16" width="12" height="12"><path d="M8 15A7 7 0 118 1a7 7 0 010 14zm0-1A6 6 0 108 2a6 6 0 000 12zm.5-6.5V4a.5.5 0 00-1 0v4a.5.5 0 00.25.433l3 1.75a.5.5 0 00.5-.866L8.5 7.5z" fill="currentColor"/></svg>`;
+
+  function normalizeText(string) {
+    if (!string) return '';
+    return string
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ł/g, 'l')
+      .replace(/ñ/g, 'n')
+      .trim();
+  }
+
+  function fuzzyMatchFzf(text, query) {
+    if (!query) return { isMatch: true, score: 0, ranges: [] };
+    
+    const textLower = normalizeText(text);
+    const queryLower = normalizeText(query);
+    
+    // 1. Exact substring match
+    const subIdx = textLower.indexOf(queryLower);
+    if (subIdx !== -1) {
+      let score = 10;
+      // Word boundary bonus
+      const isWordStart = subIdx === 0 || /[\s\-\_\.\/\:\?\&\=]/.test(textLower[subIdx - 1]);
+      if (isWordStart) {
+        score -= 5;
+      }
+      // Index position penalty
+      score += (subIdx / textLower.length) * 2;
+      
+      return {
+        isMatch: true,
+        score: score,
+        ranges: [[subIdx, subIdx + query.length - 1]]
+      };
+    }
+    
+    // 2. Subsequence match
+    let qIdx = 0;
+    let tIdx = 0;
+    const matchIndices = [];
+    
+    while (tIdx < textLower.length && qIdx < queryLower.length) {
+      if (textLower[tIdx] === queryLower[qIdx]) {
+        matchIndices.push(tIdx);
+        qIdx++;
+      }
+      tIdx++;
+    }
+    
+    if (qIdx < queryLower.length) {
+      return { isMatch: false, score: Infinity, ranges: [] };
+    }
+    
+    let score = 50; // base fuzzy score
+    const ranges = [];
+    let lastIdx = -2;
+    for (const idx of matchIndices) {
+      if (idx === lastIdx + 1) {
+        ranges[ranges.length - 1][1] = idx;
+      } else {
+        ranges.push([idx, idx]);
+      }
+      lastIdx = idx;
+    }
+    
+    const span = matchIndices[matchIndices.length - 1] - matchIndices[0] + 1;
+    const spanPenalty = (span - query.length) * 0.5;
+    score += spanPenalty;
+    score += (ranges.length - 1) * 3;
+    
+    let wordBoundaries = 0;
+    for (const idx of matchIndices) {
+      if (idx === 0 || /[\s\-\_\.\/\:\?\&\=]/.test(textLower[idx - 1])) {
+        wordBoundaries++;
+      }
+    }
+    score -= wordBoundaries * 2;
+    
+    return {
+      isMatch: true,
+      score: score,
+      ranges: ranges
+    };
+  }
+
+  function scoreItem(item, queryText) {
+    const queryTerms = queryText.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    if (queryTerms.length === 0) {
+      return { item, score: 0, matches: [null, null] };
+    }
+    
+    const title = item.title || '';
+    const url = item.url || '';
+    
+    let totalScore = 0;
+    const titleRanges = [];
+    const urlRanges = [];
+    
+    for (const term of queryTerms) {
+      const titleMatch = fuzzyMatchFzf(title, term);
+      const urlMatch = fuzzyMatchFzf(url, term);
+      
+      if (titleMatch.isMatch && urlMatch.isMatch) {
+        totalScore += Math.min(titleMatch.score, urlMatch.score) - 2;
+        titleRanges.push(...titleMatch.ranges);
+        urlRanges.push(...urlMatch.ranges);
+      } else if (titleMatch.isMatch) {
+        totalScore += titleMatch.score;
+        titleRanges.push(...titleMatch.ranges);
+      } else if (urlMatch.isMatch) {
+        totalScore += urlMatch.score + 15;
+        urlRanges.push(...urlMatch.ranges);
+      } else {
+        return null;
+      }
+    }
+    
+    // Apply recency bonus
+    const lastAccessed = item.lastAccessed || 0;
+    if (lastAccessed > 0) {
+      const ageMs = Date.now() - lastAccessed;
+      const ageMin = ageMs / 60000;
+      let recencyBonus = 0;
+      if (ageMin < 1) recencyBonus = 12;
+      else if (ageMin < 10) recencyBonus = 10;
+      else if (ageMin < 60) recencyBonus = 8;
+      else if (ageMin < 1440) recencyBonus = 6;
+      else if (ageMin < 10080) recencyBonus = 3;
+      else if (ageMin < 43200) recencyBonus = 1;
+      
+      totalScore -= recencyBonus;
+    }
+    
+    const mergeRanges = (ranges) => {
+      if (ranges.length === 0) return [];
+      ranges.sort((a, b) => a[0] - b[0]);
+      const merged = [ranges[0]];
+      for (let i = 1; i < ranges.length; i++) {
+        const last = merged[merged.length - 1];
+        const curr = ranges[i];
+        if (curr[0] <= last[1] + 1) {
+          last[1] = Math.max(last[1], curr[1]);
+        } else {
+          merged.push(curr);
+        }
+      }
+      return merged;
+    };
+    
+    return {
+      item,
+      score: totalScore,
+      matches: [
+        titleRanges.length > 0 ? mergeRanges(titleRanges) : null,
+        urlRanges.length > 0 ? mergeRanges(urlRanges) : null
+      ]
+    };
+  }
+
+  function createFuzzySearch(collection) {
+    return function(queryText) {
+      const results = [];
+      for (const item of collection) {
+        const res = scoreItem(item, queryText);
+        if (res) {
+          results.push(res);
+        }
+      }
+      results.sort((a, b) => a.score - b.score);
+      return results;
+    };
+  }
 
   function updateModeUI() {
     const { input, modeIcon } = getUIElements();
@@ -135,24 +309,17 @@
     const sourceData = STATE.mode === 'tabs' ? STATE.allTabs : STATE.allBookmarks;
 
     if (!q) {
-        // No query: show all items
-        let sortedItems;
-        if (STATE.mode === 'tabs') {
-            sortedItems = sourceData
-                .slice()
-                .sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))
-                .map(t => ({item: t}));
-        } else {
-            sortedItems = sourceData.map(b => ({item: b}));
-        }
+        // No query: show all items sorted by recency
+        const sortedItems = sourceData
+            .slice()
+            .sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))
+            .map(x => ({item: x}));
         renderItems(sortedItems);
         return;
     }
 
-    const fuzzySearch = window.Microfuzz.createFuzzySearch(sourceData, {
-        getText: (item) => [item.title, item.url]
-    })
-    const fuzzySearchResults = fuzzySearch(q)
+    const fuzzySearch = createFuzzySearch(sourceData);
+    const fuzzySearchResults = fuzzySearch(q);
     renderItems(fuzzySearchResults);
   }
 
@@ -164,6 +331,13 @@
 
       STATE.tabs = items.map(n => n.item);
       STATE.focusedIndex = -1;
+
+      // Update counter
+      const counterEl = document.getElementById("fsl-counter");
+      if (counterEl) {
+        const total = STATE.mode === 'tabs' ? STATE.allTabs.length : STATE.allBookmarks.length;
+        counterEl.textContent = `${items.length}/${total}`;
+      }
 
       if (!items.length) {
         const li = document.createElement('li');
@@ -257,6 +431,24 @@
         li.appendChild(img);
         li.appendChild(titleSpan);
         li.appendChild(urlSpan);
+
+        // clock icon for recently accessed items (within 24 hours)
+        const isRecent = t.lastAccessed && (Date.now() - t.lastAccessed < 3600000 * 24);
+        if (isRecent) {
+          const clockSpan = document.createElement('span');
+          clockSpan.className = 'fsl-recent-badge';
+          clockSpan.innerHTML = ICON_CLOCK;
+          
+          const elapsed = Date.now() - t.lastAccessed;
+          const mins = Math.round(elapsed / 60000);
+          if (mins < 60) {
+            clockSpan.title = `Accessed ${mins}m ago`;
+          } else {
+            const hrs = Math.round(mins / 60);
+            clockSpan.title = `Accessed ${hrs}h ago`;
+          }
+          li.appendChild(clockSpan);
+        }
 
         if (STATE.mode === 'tabs') {
           // close (cross) button on the right
@@ -393,14 +585,19 @@
         closeExtensionWindow();
         return;
       }
-      if (e.key === 'ArrowDown' || (e.ctrlKey && (e.key === 'n' || e.key === 'N'))) {
+      if (e.key === 'ArrowDown' || (e.ctrlKey && (e.key === 'n' || e.key === 'N' || e.key === 'j' || e.key === 'J'))) {
         e.preventDefault();
         moveFocus(1);
         return;
       }
-      if (e.key === 'ArrowUp' || (e.ctrlKey && (e.key === 'p' || e.key === 'P'))) {
+      if (e.key === 'ArrowUp' || (e.ctrlKey && (e.key === 'p' || e.key === 'P' || e.key === 'k' || e.key === 'K'))) {
         e.preventDefault();
         moveFocus(-1);
+        return;
+      }
+      if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+        e.preventDefault();
+        closeExtensionWindow();
         return;
       }
       if (e.key === 'Enter') {
