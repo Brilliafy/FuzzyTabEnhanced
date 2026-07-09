@@ -575,6 +575,11 @@
       STATE.allowMouseFocus = true;
     }, true);
 
+    // Close window when it loses focus (mimics rofi overlay)
+    window.addEventListener('blur', () => {
+      closeExtensionWindow();
+    });
+
     // Keyboard handling on the app page
     document.addEventListener('keydown', (e) => {
       // Any key press disables mouse-driven focusing until the mouse moves again

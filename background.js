@@ -193,16 +193,80 @@
     });
   }
 
+  let searchWindowId = null;
+
+  function openCenteredPopup(mode) {
+    // If the window is already open, focus it and update the mode
+    if (searchWindowId !== null) {
+      api.windows.get(searchWindowId, (win) => {
+        const err = api.runtime && api.runtime.lastError;
+        if (err || !win) {
+          searchWindowId = null;
+          createWindow();
+        } else {
+          api.windows.update(searchWindowId, { focused: true }, () => {
+            api.storage.local.set({ mode: mode });
+          });
+        }
+      });
+      return;
+    }
+
+    createWindow();
+
+    function createWindow() {
+      api.storage.local.set({ mode: mode }, () => {
+        // Query last focused window to center relative to it
+        api.windows.getLastFocused({ populate: false }, (currentWin) => {
+          const width = 800;
+          const height = 560;
+          let left = 200;
+          let top = 150;
+
+          if (currentWin && currentWin.width && currentWin.height) {
+            left = Math.round(currentWin.left + (currentWin.width - width) / 2);
+            top = Math.round(currentWin.top + (currentWin.height - height) / 2);
+          }
+
+          api.windows.create({
+            url: api.runtime.getURL('app.html'),
+            type: 'popup',
+            width: width,
+            height: height,
+            left: left,
+            top: top,
+            focused: true
+          }, (win) => {
+            searchWindowId = win.id;
+          });
+        });
+      });
+    }
+  }
+
+  // Handle Command Shortcuts
   if (api && api.commands && api.commands.onCommand) {
     api.commands.onCommand.addListener((command) => {
-      if (command === 'open-bookmarks') {
-        try {
-          api.storage.local.set({ mode: 'bookmarks' }, () => {
-            if (api.browserAction && api.browserAction.openPopup) {
-              api.browserAction.openPopup();
-            }
-          });
-        } catch (_) {}
+      if (command === 'open-tabs') {
+        openCenteredPopup('tabs');
+      } else if (command === 'open-bookmarks') {
+        openCenteredPopup('bookmarks');
+      }
+    });
+  }
+
+  // Handle Browser Action Toolbar Icon Click
+  if (api && api.browserAction && api.browserAction.onClicked) {
+    api.browserAction.onClicked.addListener(() => {
+      openCenteredPopup('tabs');
+    });
+  }
+
+  // Track closed windows to reset searchWindowId reference
+  if (api && api.windows && api.windows.onRemoved) {
+    api.windows.onRemoved.addListener((windowId) => {
+      if (windowId === searchWindowId) {
+        searchWindowId = null;
       }
     });
   }
