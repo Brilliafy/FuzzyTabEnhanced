@@ -8,8 +8,7 @@
   },
   "browser_action": {
     "default_title": "FuzzyTabEnhanced",
-    "default_icon": "icons/ic_search.svg",
-    "default_popup": "app.html"
+    "default_icon": "icons/ic_search.svg"
   },
   "permissions": [
     "tabs",
@@ -21,17 +20,22 @@
     "persistent": false
   },
   "commands": {
-    "_execute_browser_action": {
+    "open-tabs": {
       "suggested_key": {
         "default": "Ctrl+Shift+Space"
       },
-      "description": "Open FuzzyTabs"
+      "description": "Open FuzzyTabEnhanced Search"
     },
     "open-bookmarks": {
       "suggested_key": {
         "default": "Ctrl+Shift+B"
       },
-      "description": "Open FuzzyTabs in bookmarks mode"
+      "description": "Open FuzzyTabEnhanced Bookmarks"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "fuzzytabenhanced@brilliafy.github.io"
     }
   }
 }

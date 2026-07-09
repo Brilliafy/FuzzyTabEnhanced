@@ -4,7 +4,7 @@ html, body {
   padding: 0;
   width: 800px;
   height: 560px;
-  background: transparent;
+  background: #121215; /* Solid dark theme background resolves the white edges/flashing */
   overflow: hidden;
 }
 
@@ -13,20 +13,17 @@ html, body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Page wrapper with dark glassmorphism */
+/* Page wrapper - centered modal / rofi-like container */
 .fsl-page {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: rgba(18, 18, 22, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: #121215;
   color: #f3f4f6;
   padding: 16px 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 12px 40px rgba(0, 0, 0, 0.5);
+  border: 2px solid #6366f1; /* Distinct bold rofi border */
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
 }
 
 /* Input container */
@@ -35,27 +32,25 @@ html, body {
   width: 100%;
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 10px 14px;
   margin-bottom: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+  transition: border-color 150ms ease, background-color 150ms ease;
 }
 
 .fsl-input-container:focus-within {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(99, 102, 241, 0.6);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #818cf8;
 }
 
-/* Prompt symbol like fzf */
+/* Prompt symbol like fzf/rofi */
 .fsl-prompt {
   color: #6366f1;
   font-weight: 700;
   font-size: 18px;
-  margin-right: 10px;
+  margin-right: 12px;
   user-select: none;
   display: flex;
   align-items: center;
@@ -69,21 +64,21 @@ html, body {
   border: none;
   outline: none;
   font-size: 16px;
-  font-weight: 400;
+  font-weight: 500;
   color: #ffffff;
-  caret-color: #6366f1;
+  caret-color: #818cf8;
   line-height: 1.4;
   padding: 0;
   margin: 0;
 }
 
 .fsl-page input::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.25);
 }
 
 /* Counter display */
 .fsl-counter {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color: rgba(255, 255, 255, 0.4);
   font-size: 12px;
   margin-left: 12px;
@@ -124,9 +119,9 @@ html, body {
   list-style: none;
   flex: 1;
   overflow-y: auto;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
 .fsl-results::-webkit-scrollbar {
@@ -135,8 +130,8 @@ html, body {
 }
 
 .fsl-results::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
 }
 
 .fsl-results::-webkit-scrollbar-track {
@@ -151,7 +146,7 @@ html, body {
   padding: 10px 12px;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.85);
-  border-radius: 6px;
+  border-radius: 4px;
   margin-bottom: 2px;
   position: relative;
   cursor: pointer;
@@ -159,25 +154,24 @@ html, body {
 }
 
 .fsl-results li:nth-child(odd) {
-  background: rgba(255, 255, 255, 0.015);
+  background: rgba(255, 255, 255, 0.01);
 }
 
-/* Hover and focused states */
+/* Hover and focused (rofi selected style) */
 .fsl-results li:hover {
   background: rgba(255, 255, 255, 0.03);
 }
 
 .fsl-results li.focused {
-  background: rgba(99, 102, 241, 0.14);
+  background: #6366f1; /* Solid primary color background on focus, matching rofi */
   color: #ffffff;
-  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.3);
 }
 
 /* Indicator arrow */
 .fsl-results li .fsl-arrow {
   width: 10px;
   flex: 0 0 10px;
-  color: #818cf8;
+  color: #a78bfa;
   opacity: 0;
   font-size: 12px;
   transition: opacity 80ms ease;
@@ -185,6 +179,7 @@ html, body {
 
 .fsl-results li.focused .fsl-arrow {
   opacity: 1;
+  color: #ffffff;
 }
 
 /* Favicon */
@@ -192,7 +187,7 @@ html, body {
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
-  border-radius: 4px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -207,7 +202,7 @@ html, body {
 
 /* URL text */
 .fsl-url {
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 12px;
   flex: 1;
   overflow: hidden;
@@ -215,13 +210,22 @@ html, body {
   white-space: nowrap;
 }
 
+.fsl-results li.focused .fsl-url {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 /* Match highlight */
 .fsl-hl {
-  color: #fbbf24;
+  color: #f59e0b; /* Amber */
   font-weight: 700;
-  background: rgba(251, 191, 36, 0.1);
+  background: rgba(245, 158, 11, 0.08);
   padding: 0 2px;
   border-radius: 2px;
+}
+
+.fsl-results li.focused .fsl-hl {
+  color: #fbbf24;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 /* Recency badge (clock) */
@@ -229,14 +233,13 @@ html, body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.35);
   margin-left: 8px;
   flex-shrink: 0;
-  transition: color 150ms ease;
 }
 
 .fsl-results li.focused .fsl-recent-badge {
-  color: rgba(129, 140, 248, 0.8);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* Close button for tabs */
@@ -260,16 +263,51 @@ html, body {
 
 .fsl-results li.focused .fsl-close {
   opacity: 1;
+  color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .fsl-results li .fsl-close:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.fsl-results li.focused .fsl-close:hover {
+  background: rgba(0, 0, 0, 0.3);
+  color: #ff8888;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .fsl-results li .fsl-close svg {
   width: 8px;
   height: 8px;
   stroke: currentColor;
+}
+
+/* Keyboard guide footer (rofi style status line) */
+.fsl-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+  user-select: none;
+}
+
+.fsl-footer span {
+  white-space: nowrap;
+}
+
+.fsl-footer b {
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  padding: 1px 4px;
+  margin-right: 4px;
+  font-weight: 500;
 }
