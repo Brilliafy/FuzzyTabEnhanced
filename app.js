@@ -197,7 +197,7 @@
       setTimeout(() => input.focus(), 50);
     }
     if (modeIcon) {
-      modeIcon.innerHTML = STATE.mode === 'tabs' ? ICON_TAB : ICON_STAR;
+      setSafeElementSvg(modeIcon, STATE.mode === 'tabs' ? ICON_TAB : ICON_STAR);
       modeIcon.title = STATE.mode === 'tabs' ? 'Tab mode' : 'Bookmark mode';
     }
   }
@@ -285,6 +285,18 @@
     } catch (_) {}
   }
 
+  function setSafeElementSvg(element, svgString) {
+    while (element.firstChild) {
+      element.removeChild(element.firstChild);
+    }
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgString, 'image/svg+xml');
+    const svgEl = doc.documentElement;
+    if (svgEl && svgEl.tagName.toLowerCase() === 'svg') {
+      element.appendChild(svgEl);
+    }
+  }
+
   function buildHighlightedSpan(text, ranges) {
     const span = document.createElement('span');
     let pos = 0;
@@ -327,7 +339,10 @@
     try {
       const { ul } = getUIElements();
       if (!ul) return;
-      ul.innerHTML = '';
+      
+      while (ul.firstChild) {
+        ul.removeChild(ul.firstChild);
+      }
 
       STATE.tabs = items.map(n => n.item);
       STATE.focusedIndex = -1;
@@ -437,7 +452,7 @@
         if (isRecent) {
           const clockSpan = document.createElement('span');
           clockSpan.className = 'fsl-recent-badge';
-          clockSpan.innerHTML = ICON_CLOCK;
+          setSafeElementSvg(clockSpan, ICON_CLOCK);
           
           const elapsed = Date.now() - t.lastAccessed;
           const mins = Math.round(elapsed / 60000);
@@ -457,7 +472,7 @@
           closeBtn.type = 'button';
           // SVG cross icon
           // Ensure the cross is visible by explicitly disabling fill and using rounded joins
-          closeBtn.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M3 3 L9 9 M9 3 L3 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+          setSafeElementSvg(closeBtn, '<svg viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M3 3 L9 9 M9 3 L3 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>');
           // Tooltip with platform-specific hotkey
           const isMac = navigator.platform && /Mac/i.test(navigator.platform);
           closeBtn.title = isMac ? 'Ctrl+W' : 'Alt+W';
